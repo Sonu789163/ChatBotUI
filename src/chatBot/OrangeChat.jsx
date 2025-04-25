@@ -85,6 +85,13 @@ const createAppTheme = (darkMode) =>
   });
 
 export default function OrangeChat() {
+  const [sessionId] = useState(() => `session_${Date.now()}`);
+  const [conversationMemory, setConversationMemory] = useState([]);
+  const [memoryContext, setMemoryContext] = useState({
+    last_topic: null,
+    user_interests: [],
+    conversation_summary: "",
+  });
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isBotThinking, setIsBotThinking] = useState(false);
@@ -94,6 +101,23 @@ export default function OrangeChat() {
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem("darkMode");
     return savedMode ? JSON.parse(savedMode) : false;
+  });
+
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  const SESSION_STORAGE_KEY = "chatSessionData";
+  const [sessionData, setSessionData] = useState(() => {
+    const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (savedSession) {
+      const parsed = JSON.parse(savedSession);
+      const now = Date.now();
+      if (now - parsed.lastActivity < SESSION_TIMEOUT) {
+        return parsed;
+      }
+    }
+    return {
+      id: `session_${Date.now()}`,
+      lastActivity: Date.now(),
+    };
   });
 
   const messagesEndRef = useRef(null);
@@ -122,6 +146,38 @@ export default function OrangeChat() {
     scrollToBottom();
   }, [messages, isInitialView]);
 
+  // Add new useEffect for session management
+  useEffect(() => {
+    const updateSessionActivity = () => {
+      setSessionData((prev) => ({
+        ...prev,
+        lastActivity: Date.now(),
+      }));
+    };
+
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+
+    const sessionTimeoutId = setTimeout(() => {
+      clearMemory();
+      setSessionData({
+        id: `session_${Date.now()}`,
+        lastActivity: Date.now(),
+      });
+    }, SESSION_TIMEOUT);
+
+    // Track user activity
+    window.addEventListener("mousemove", updateSessionActivity);
+    window.addEventListener("keypress", updateSessionActivity);
+    window.addEventListener("click", updateSessionActivity);
+
+    return () => {
+      clearTimeout(sessionTimeoutId);
+      window.removeEventListener("mousemove", updateSessionActivity);
+      window.removeEventListener("keypress", updateSessionActivity);
+      window.removeEventListener("click", updateSessionActivity);
+    };
+  }, [sessionData]);
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -138,28 +194,105 @@ export default function OrangeChat() {
     setIsBotThinking(true);
 
     try {
+      const requestBody = {
+        message: userMessage.text,
+        session_id: sessionData.id, // Updated to use sessionData.id
+        conversation_history: conversationMemory.map((msg) => ({
+          role: msg.type,
+          content: msg.text,
+          timestamp: msg.timestamp,
+        })),
+      };
+
       const res = await fetch(
-        "https://sonu789163.app.n8n.cloud/webhook/3827bee2-24fa-4c77-8643-0f0dba094ae7",
+        "https://chinmaygupta.app.n8n.cloud/webhook/ae70e150-23bb-4dae-8267-e1f2bd7c883e",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: userMessage.text }),
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(requestBody),
         }
       );
 
+      console.log("Request:", res);
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const reply = await res.text();
-      const parsed = JSON.parse(reply);
-      const output = parsed[0]?.output || "Sorry, no response received.";
+      console.log("Raw response:", reply);
+
+      if (!reply || reply.trim() === "") {
+        throw new Error("Empty response received");
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(reply);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        throw new Error("Invalid JSON response");
+      }
+
+      if (!Array.isArray(parsed) || !parsed[0]?.output) {
+        throw new Error("Unexpected response format");
+      }
+
+      const { output, memory_context } = parsed[0];
+
+      // Update memory context if provided
+      if (memory_context) {
+        setMemoryContext(memory_context);
+      }
+
+      // Update conversation memory with timestamp
+      const newUserMessage = {
+        type: "user",
+        text: userMessage.text,
+        timestamp: Date.now(),
+      };
+
+      const newBotMessage = {
+        type: "bot",
+        text: output,
+        timestamp: Date.now(),
+      };
+
+      setConversationMemory((prev) => [...prev, newUserMessage, newBotMessage]);
 
       setIsBotThinking(false);
       setMessages((prev) => [...prev, { type: "bot", text: output }]);
     } catch (err) {
       setIsBotThinking(false);
+      console.error("Error details:", err);
       setMessages((prev) => [
         ...prev,
-        { type: "bot", text: "Sorry, something went wrong." },
+        {
+          type: "bot",
+          text: `Error: ${err.message || "Something went wrong"}`,
+        },
       ]);
     }
+  };
+
+  // Add a function to clear memory if needed
+  const clearMemory = () => {
+    setConversationMemory([]);
+    setMemoryContext({
+      last_topic: null,
+      user_interests: [],
+      conversation_summary: "",
+    });
+    setMessages([]);
+    setSessionData({
+      id: `session_${Date.now()}`,
+      lastActivity: Date.now(),
+    });
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   };
 
   return (
@@ -323,7 +456,7 @@ export default function OrangeChat() {
               sx={{
                 display: "flex",
                 alignItems: "flex-start",
-                justifyContent: "flex-end",
+                justifyContent: "flex-start",
                 mb: 4,
                 gap: 2,
               }}
