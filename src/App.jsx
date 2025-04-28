@@ -1,12 +1,10 @@
-import SayHaloChat from "./chatBot/Chat"
-import ArtMuseChatbot from "./chatBot/Chat"
-import OrangeChat from "./chatBot/OrangeChat"
+import ChatBot from "./chatBot/ChatBotUI"
+
 
 function App() {
 
   return (
-    // <SayHaloChat/>
-    <OrangeChat/>
+    <ChatBot/>
   )
 }
 

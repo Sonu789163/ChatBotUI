@@ -1,0 +1,111 @@
+.orange-chat {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+.chat-toggle-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #FF7B00;
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+.chat-window {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 320px;
+  height: 400px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chat-header {
+  padding: 15px;
+  background-color: #FF7B00;
+  color: white;
+}
+.chat-header h3 {
+  margin: 0;
+}
+.messages-container {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.message {
+  padding: 10px 15px;
+  border-radius: 18px;
+  max-width: 75%;
+  word-break: break-word;
+}
+.user-message {
+  align-self: flex-end;
+  background-color: #E6F2FF;
+}
+.bot-message {
+  align-self: flex-start;
+  background-color: #F1F1F1;
+}
+.message-form {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #eee;
+}
+.message-form input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  margin-right: 10px;
+}
+.message-form button {
+  background-color: #FF7B00;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 15px;
+  cursor: pointer;
+}
+.message-form button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+/* Typing indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+}
+.typing-indicator span {
+  height: 8px;
+  width: 8px;
+  margin: 0 2px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.5s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+}

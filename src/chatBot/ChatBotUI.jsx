@@ -21,6 +21,11 @@ import PersonIcon from "@mui/icons-material/Person";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import { v4 as uuidv4 } from "uuid";
+import "./OrangeChat.css";
+
+const SESSION_STORAGE_KEY = "chatSessionData";
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 // Create theme function
 const createAppTheme = (darkMode) =>
@@ -84,8 +89,26 @@ const createAppTheme = (darkMode) =>
     },
   });
 
-export default function OrangeChat() {
-  const [sessionId] = useState(() => `session_${Date.now()}`);
+export default function ChatBot() {
+  // Session data with UUID-based ID
+  const [sessionData, setSessionData] = useState(() => {
+    const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (savedSession) {
+      const parsed = JSON.parse(savedSession);
+      const now = Date.now();
+      if (now - parsed.lastActivity < SESSION_TIMEOUT) {
+        return parsed;
+      }
+    }
+    // Create new session with UUID if none exists or is expired
+    const newSession = {
+      id: `session_${uuidv4()}`,
+      lastActivity: Date.now(),
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
+    return newSession;
+  });
+
   const [conversationMemory, setConversationMemory] = useState([]);
   const [memoryContext, setMemoryContext] = useState({
     last_topic: null,
@@ -103,28 +126,8 @@ export default function OrangeChat() {
     return savedMode ? JSON.parse(savedMode) : false;
   });
 
-  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-  const SESSION_STORAGE_KEY = "chatSessionData";
-  const [sessionData, setSessionData] = useState(() => {
-    const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (savedSession) {
-      const parsed = JSON.parse(savedSession);
-      const now = Date.now();
-      if (now - parsed.lastActivity < SESSION_TIMEOUT) {
-        return parsed;
-      }
-    }
-    return {
-      id: `session_${Date.now()}`,
-      lastActivity: Date.now(),
-    };
-  });
-
   const messagesEndRef = useRef(null);
   const theme = createAppTheme(darkMode);
-
-  // Remove the prefersDarkMode hook since we want to control it manually
-  // const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   // Update localStorage when darkMode changes
   useEffect(() => {
@@ -146,23 +149,21 @@ export default function OrangeChat() {
     scrollToBottom();
   }, [messages, isInitialView]);
 
-  // Add new useEffect for session management
+  // Session management
   useEffect(() => {
     const updateSessionActivity = () => {
-      setSessionData((prev) => ({
-        ...prev,
-        lastActivity: Date.now(),
-      }));
+      setSessionData((prev) => {
+        const updated = {
+          ...prev,
+          lastActivity: Date.now(),
+        };
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
     };
-
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
 
     const sessionTimeoutId = setTimeout(() => {
       clearMemory();
-      setSessionData({
-        id: `session_${Date.now()}`,
-        lastActivity: Date.now(),
-      });
     }, SESSION_TIMEOUT);
 
     // Track user activity
@@ -176,7 +177,7 @@ export default function OrangeChat() {
       window.removeEventListener("keypress", updateSessionActivity);
       window.removeEventListener("click", updateSessionActivity);
     };
-  }, [sessionData]);
+  }, [sessionData.id]); // Only re-run when session ID changes
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -196,7 +197,7 @@ export default function OrangeChat() {
     try {
       const requestBody = {
         message: userMessage.text,
-        session_id: sessionData.id, // Updated to use sessionData.id
+        session_id: sessionData.id, // Use UUID-based session ID
         conversation_history: conversationMemory.map((msg) => ({
           role: msg.type,
           content: msg.text,
@@ -288,11 +289,18 @@ export default function OrangeChat() {
       conversation_summary: "",
     });
     setMessages([]);
+    const newSessionId = uuidv4();
     setSessionData({
-      id: `session_${Date.now()}`,
+      id: `session_${newSessionId}`,
       lastActivity: Date.now(),
     });
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+    localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        id: `session_${newSessionId}`,
+        lastActivity: Date.now(),
+      })
+    );
   };
 
   return (
@@ -500,77 +508,74 @@ export default function OrangeChat() {
             right: 0,
             p: 2,
             transform: isInitialView ? "translateY(50%)" : "none",
-            transition: "all 0.3s ease-in-out",
+            transition: "transform 0.3s ease-in-out",
             bgcolor: "background.default",
           }}
         >
-          <Container maxWidth="sm">
-            <Paper
-              component="form"
+          {/* <Container maxWidth="sm"> */}
+          <Paper
+            component="form"
+            sx={{
+              p: "2px 12px",
+              width: { xs: "70%", lg: "35%" },
+              margin: "auto",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: 3,
+              bgcolor: "background.paper",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+            elevation={0}
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage();
+            }}
+          >
+            <TextField
               sx={{
-                p: "2px 12px",
-                display: "flex",
-                alignItems: "center",
-                borderRadius: 3,
-                bgcolor: "background.paper",
-                border: "1px solid rgba(255,255,255,0.1)",
+                flex: 1,
+                "& .MuiInputBase-root": {
+                  padding: "8px 0",
+                  color: "text.primary",
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "text.secondary",
+                  opacity: 1,
+                },
               }}
-              elevation={0}
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
+              placeholder="Message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              variant="standard"
+              InputProps={{
+                disableUnderline: true,
               }}
-            >
-              <TextField
-                sx={{
-                  flex: 1,
-                  "& .MuiInputBase-root": {
-                    padding: "8px 0",
-                    color: "text.primary",
-                  },
-                  "& .MuiInputBase-input::placeholder": {
-                    color: "text.secondary",
-                    opacity: 1,
-                  },
-                }}
-                placeholder="Message..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                }}
-              />
-              <IconButton
-                sx={{
-                  p: 1,
-                  color: input.trim()
-                    ? (theme) =>
-                        theme.palette.mode === "light"
-                          ? theme.palette.primary.main
-                          : theme.palette.text.primary
-                    : "text.secondary",
-                  transition: "color 0.2s",
-                  "&:hover": {
-                    backgroundColor: (theme) =>
+            />
+            <IconButton
+              sx={{
+                p: 1,
+                color: input.trim()
+                  ? (theme) =>
                       theme.palette.mode === "light"
-                        ? "rgba(44, 24, 16, 0.04)"
-                        : "rgba(255, 255, 255, 0.04)",
-                  },
-                }}
-                onClick={sendMessage}
-                disabled={!input.trim()}
-              >
-                <SendIcon />
-              </IconButton>
-            </Paper>
-          </Container>
+                        ? theme.palette.primary.main
+                        : theme.palette.text.primary
+                  : "text.secondary",
+                transition: "color 0.2s",
+                "&:hover": {
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "light"
+                      ? "rgba(44, 24, 16, 0.04)"
+                      : "rgba(255, 255, 255, 0.04)",
+                },
+              }}
+              onClick={sendMessage}
+              disabled={!input.trim()}
+            >
+              <SendIcon />
+            </IconButton>
+          </Paper>
+          {/* </Container> */}
         </Box>
       </Container>
     </ThemeProvider>
