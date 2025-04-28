@@ -441,7 +441,7 @@ export default function ChatBot() {
                 sx={{
                   p: 2,
                   borderRadius: 3,
-                  bgcolor: "#fff",
+                  bgcolor:darkMode ? '#707070' : "#fff",
                   maxWidth: "80%",
                 }}
               >
