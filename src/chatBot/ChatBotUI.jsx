@@ -332,7 +332,7 @@ export default function ChatBot() {
               component="div"
               sx={{ color: "text.primary" }}
             >
-              Art Support Agent
+              Kelly Pugh AI
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center" }}>
               {darkMode ? (
@@ -388,7 +388,7 @@ export default function ChatBot() {
             component="h1"
             sx={{ color: "text.primary", mb: 2 }}
           >
-            Art Support Agent
+            Kelly Pugh AI
           </Typography>
           <Typography variant="h6" sx={{ color: "text.secondary" }}>
             How can I help you today?
