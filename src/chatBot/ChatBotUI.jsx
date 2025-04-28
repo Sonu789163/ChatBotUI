@@ -218,7 +218,7 @@ export default function ChatBot() {
         }
       );
 
-      console.log("Request:", res);
+      // console.log("Request:", res);
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
