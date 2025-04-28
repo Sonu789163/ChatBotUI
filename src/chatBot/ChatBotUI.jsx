@@ -344,7 +344,7 @@ export default function ChatBot() {
                 checked={darkMode}
                 onChange={handleDarkModeToggle}
                 color="default"
-                sx={{ ml: 1 }}
+                sx={{ ml: 1,mr:-1, }}
               />
             </Box>
           </Box>
@@ -352,7 +352,7 @@ export default function ChatBot() {
       </AppBar>
 
       <Container
-        maxWidth="sm"
+        maxWidth="md"
         sx={{
           height: "100vh",
           display: "flex",
@@ -400,13 +400,16 @@ export default function ChatBot() {
           sx={{
             flexGrow: 1,
             overflowY: "auto",
-            px: 3,
+            px: 2.5,
             pb: messages.length > 0 ? 10 : 0,
             "&::-webkit-scrollbar": {
               display: "none",
             },
             scrollbarWidth: "none",
             msOverflowStyle: "none",
+            display: "flex",
+            flexDirection: "column",
+            // alignItems: "center", // Center horizontally
           }}
         >
           {messages.map((msg, i) => (
@@ -418,6 +421,7 @@ export default function ChatBot() {
                 justifyContent: msg.type === "user" ? "flex-end" : "flex-start",
                 mb: 4,
                 gap: 2,
+                width: "100%",
               }}
             >
               {msg.type === "bot" && (
@@ -437,7 +441,7 @@ export default function ChatBot() {
                 sx={{
                   p: 2,
                   borderRadius: 3,
-                  bgcolor: "background.paper",
+                  bgcolor: "#fff",
                   maxWidth: "80%",
                 }}
               >
@@ -459,6 +463,7 @@ export default function ChatBot() {
               )}
             </Box>
           ))}
+
           {isBotThinking && (
             <Box
               sx={{
@@ -467,6 +472,8 @@ export default function ChatBot() {
                 justifyContent: "flex-start",
                 mb: 4,
                 gap: 2,
+                width: "60%", // Match the width of messages container
+                maxWidth: "800px",
               }}
             >
               <Paper
@@ -517,13 +524,15 @@ export default function ChatBot() {
             component="form"
             sx={{
               p: "2px 12px",
-              width: { xs: "70%", lg: "35%" },
+              // width: { xs: "70%", lg: "50%" },
               margin: "auto",
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-end", // Align items to bottom
               borderRadius: 3,
               bgcolor: "background.paper",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255, 255, 255, 0)",
+              maxWidth: "800px",
+              mb: 2,
             }}
             elevation={0}
             onSubmit={(e) => {
@@ -532,21 +541,43 @@ export default function ChatBot() {
             }}
           >
             <TextField
+              multiline
+              minRows={1}
+              maxRows={4}
               sx={{
                 flex: 1,
                 "& .MuiInputBase-root": {
                   padding: "8px 0",
                   color: "text.primary",
+                  // maxHeight: "200px",
+                  overflowY: "auto",
+                  "&::-webkit-scrollbar": {
+                    display: "none",
+                  },
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
                 },
                 "& .MuiInputBase-input::placeholder": {
                   color: "text.secondary",
                   opacity: 1,
                 },
+                "& .MuiInputBase-input": {
+                  "&::-webkit-scrollbar": {
+                    display: "none",
+                  },
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                },
               }}
               placeholder="Message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
               variant="standard"
               InputProps={{
                 disableUnderline: true,
@@ -554,7 +585,8 @@ export default function ChatBot() {
             />
             <IconButton
               sx={{
-                p: 1,
+                p: 0,
+                mb: 1, // Add bottom margin to align with text
                 color: input.trim()
                   ? (theme) =>
                       theme.palette.mode === "light"
@@ -575,7 +607,6 @@ export default function ChatBot() {
               <SendIcon />
             </IconButton>
           </Paper>
-          {/* </Container> */}
         </Box>
       </Container>
     </ThemeProvider>
